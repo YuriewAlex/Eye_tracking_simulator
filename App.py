@@ -10,18 +10,21 @@ from Controller import DroneController
 from Errors import ErrorHandler
 
 
-class Worker(QThread):
-    def __init__(self, drone_controller, loop):
+class DroneThread(QThread):
+    def __init__(self, loop,  drone_controller=DroneController()):
         super().__init__()
         self.drone_controller = drone_controller
         self.loop = loop
 
     def run(self):
+        self.drone_controller.track_device.start_tracking()
         self.loop.run_until_complete(self.control_drone_loop())
 
     async def control_drone_loop(self):
         while self.drone_controller.on_flight:
             await self.drone_controller.control_drone()
+
+
 class MainInterface(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -92,12 +95,13 @@ class MainInterface(QMainWindow):
 
     @pyqtSlot()
     def calibrate_drone(self):
-        #asyncio.run(self.drone_controller.calibrate())
+        # asyncio.run(self.drone_controller.calibrate())
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setInformativeText("Калибровка выполнена успешно")
         msg.setWindowTitle("Успех")
         msg.exec_()
+
     def start_simulation(self):
         try:
             self.gazebo_simulator.start_simulator()
@@ -125,9 +129,8 @@ class MainInterface(QMainWindow):
         if started:
             await asyncio.sleep(1)
 
-            self.dr_thread = Worker(self.drone_controller, self.loop)
+            self.dr_thread = DroneThread(self.loop, self.drone_controller)
             self.dr_thread.start()
-
 
     def stop_drone(self):
         try:
@@ -135,11 +138,11 @@ class MainInterface(QMainWindow):
                 self.dr_thread.exit()
                 self.drone_controller.on_flight = False
                 self.drone_task.cancel()
-                #self.loop.run_until_complete(self.drone_task)
+                self.track_device.stop_tracking()
                 self.loop.run_until_complete(self.drone_controller.stop_drone())
                 self.status_label.setText("Дрон успешно остановлен!")
         except Exception as e:
-            if  str(e) != "This event loop is already running":
+            if str(e) != "This event loop is already running":
                 self.error_handler.log_error(e)
                 self.status_label.setText(f"Error: {str(e)}")
 
@@ -180,8 +183,6 @@ class MainInterface(QMainWindow):
             self.drone_connector_thread.quit()
             self.drone_connector_thread.wait()
             QApplication.instance().quit()
-
-
 
 
 if __name__ == '__main__':

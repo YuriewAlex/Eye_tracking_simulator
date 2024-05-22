@@ -39,28 +39,7 @@ class DroneController(QObject):
         print("-- Starting gyroscope calibration")
         async for progress_data in self.drone.calibration.calibrate_gyro():
             print(progress_data)
-        print("-- Gyroscope calibration finished")
 
-        print("-- Starting accelerometer calibration")
-        async for progress_data in self.drone.calibration.calibrate_accelerometer():
-            print(progress_data)
-        print("-- Accelerometer calibration finished")
-
-        print("-- Starting magnetometer calibration")
-        """async for progress_data in self.drone.calibration.calibrate_magnetometer():
-            print(progress_data)
-        print("-- Magnetometer calibration finished")
-
-        print("-- Starting board level horizon calibration")
-        async for progress_data in self.drone.calibration.calibrate_level_horizon():
-            print(progress_data)
-        print("-- Board level calibration finished")"""
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Default)
-        msg.setText("An error occurred")
-        msg.setInformativeText("Калибровка выполнена успешно")
-        msg.setWindowTitle("Error")
-        msg.exec_()
     async def start_drone(self):
         print("Arming the drone...")
         await self.drone.action.arm()
@@ -80,21 +59,17 @@ class DroneController(QObject):
         await self.drone.action.land()
 
     async def control_drone(self):
-        #self.track_device.start_tracking()
 
-            print(TrackDevice.roadmap)
-            mode = TrackDevice.roadmap["Mode"]
-            vertical_param = TrackDevice.roadmap["vertical_param"]
-            direction = TrackDevice.roadmap["direction"]
-            if mode == "hover":
-                await self.hover_drone()
-            elif mode == "vertical":
-                await self.updown_drone(vertical_param)
-            elif mode == "horizontal":
-                #print(direction)
-                await self.setDirection_drone(direction)
-            #time.sleep(2)
-
+        mode = TrackDevice.roadmap["Mode"]
+        vertical_param = TrackDevice.roadmap["vertical_param"]
+        direction = TrackDevice.roadmap["direction"]
+        if mode == "hover":
+            await self.hover_drone()
+        elif mode == "vertical":
+            await self.updown_drone(vertical_param)
+        elif mode == "horizontal":
+            # print(direction)
+            await self.setDirection_drone(direction)
 
     async def hover_drone(self):
         await self.drone.offboard.set_velocity_ned(VelocityNedYaw(0.0, 0.0, 0.2, 0.0))
@@ -104,18 +79,17 @@ class DroneController(QObject):
         await self.drone.offboard.set_velocity_ned(VelocityNedYaw(0, 0, vertical_param, 0))
         await asyncio.sleep(2)
 
-
     async def setDirection_drone(self, direction):
-        #print("Setting direction...")
+        # print("Setting direction...")
         yaw, roll, pitch = False, False, False
         yawspeed, rollspeed, pitchspeed = None, None, None
-        #print("Setting yaw...")
+        # print("Setting yaw...")
         if direction[0] in (0, 1) and direction[1] in (0, 0.5):
             yaw = True
-            yawspeed = VelocityBodyYawspeed(1, 0, 0, -10+20*direction[0])
+            yawspeed = VelocityBodyYawspeed(1, 0, 0, -10 + 20 * direction[0])
         elif direction[0] == 0 and direction[1] == 1 or direction[0] == 1 and direction[1] == 0:
             roll = True
-            rollspeed = VelocityBodyYawspeed(1, direction[0]-0.5, 0, 0)
+            rollspeed = VelocityBodyYawspeed(1, direction[0] - 0.5, 0, 0)
         elif direction[1] in (0, 1):
             pitch = True
             pitchspeed = VelocityBodyYawspeed(2 - direction[1] * 1.5, 0, 0, 0)
